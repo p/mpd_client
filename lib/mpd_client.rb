@@ -27,6 +27,8 @@ module MPD
     'mixrampdelay' => 'fetch_nothing',
     'random' => 'fetch_nothing',
     'repeat' => 'fetch_nothing',
+    # TODO parse the volume out
+    'getvol' => 'fetch_item',
     'setvol' => 'fetch_nothing',
     'single' => 'fetch_nothing',
     'replay_gain_mode' => 'fetch_nothing',
