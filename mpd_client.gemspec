@@ -15,11 +15,11 @@ Gem::Specification.new do |gem|
   gem.executables   = gem.files.grep(%r{^bin/}).map { |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.required_ruby_version = '>= 2.6.6'
-  gem.name          = 'mpd_client'
+  gem.name          = 'o-mpd_client'
   gem.require_paths = ['lib']
   gem.version       = MPD::Client::VERSION
   gem.license       = 'MIT'
 
   gem.add_development_dependency 'bundler'
-  gem.metadata['rubygems_mfa_required'] = 'true'
+  #gem.metadata['rubygems_mfa_required'] = 'true'
 end
