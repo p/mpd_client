@@ -2,6 +2,7 @@
 
 require 'socket'
 require 'stringio'
+require 'timeout'
 require 'mpd_client/version'
 
 module MPD
@@ -152,9 +153,9 @@ module MPD
       # ```
       attr_accessor :log
 
-      def connect(host = 'localhost', port = 6600)
+      def connect(host = 'localhost', port = 6600, timeout: nil)
         client = MPD::Client.new
-        client.connect(host, port)
+        client.connect(host, port, timeout: timeout)
 
         client
       end
@@ -181,9 +182,10 @@ module MPD
       reset
     end
 
-    def connect(host = 'localhost', port = 6600)
+    def connect(host = 'localhost', port = 6600, timeout: nil)
       @host = host
       @port = port
+      @timeout = timeout
 
       reconnect
     end
@@ -192,10 +194,12 @@ module MPD
       log&.info("MPD (re)connect #{@host}, #{@port}")
 
       @socket =
-        if @host.start_with?('/')
-          UNIXSocket.new(@host)
-        else
-          TCPSocket.new(@host, @port)
+        Timeout.timeout(@timeout) do
+          if @host.start_with?('/')
+            UNIXSocket.new(@host)
+          else
+            TCPSocket.new(@host, @port)
+          end
         end
 
       hello
@@ -204,7 +208,13 @@ module MPD
 
     def disconnect
       log&.info('MPD disconnect')
-      @socket.close
+      begin
+        Timeout.timeout(@timeout) do
+          @socket.close
+        end
+      rescue Timeout::Error
+        @socket = nil
+      end
       reset
     end
 
@@ -273,13 +283,19 @@ module MPD
 
     def write_line(line)
       begin
-        @socket.puts line
-      rescue Errno::EPIPE
+        Timeout.timeout(@timeout) do
+          @socket.puts line
+        end
+      rescue Errno::EPIPE, Timeout::Error
         reconnect
-        @socket.puts line
+        Timeout.timeout(@timeout) do
+          @socket.puts line
+        end
       end
 
-      @socket.flush
+      Timeout.timeout(@timeout) do
+        @socket.flush
+      end
     end
 
     def write_command(command, *args)
@@ -302,7 +318,9 @@ module MPD
     end
 
     def read_line
-      line = @socket.gets
+      line = Timeout.timeout(@timeout) do
+        @socket.gets
+      end
 
       raise 'Connection lost while reading line' unless line.end_with?("\n")
 
@@ -507,7 +525,9 @@ module MPD
     end
 
     def hello
-      line = @socket.gets
+      line = Timeout.timeout(@timeout) do
+        @socket.gets
+      end
 
       raise 'Connection lost while reading MPD hello' unless line.end_with?("\n")
 
